@@ -1,12 +1,26 @@
 const algorithmia = require('algorithmia');
 const algorithmiaKey = require('../credentials/algorithmia.json').apiKey;
 const sbd = require('sbd');
+const watsonApiKey = require('../credentials/watson-nlu.json').apikey;
+
+const NaturalLanguageUnderstandingV1 = require('watson-developer-cloud/natural-language-understanding/v1.js');
+
+
+var nlu = new NaturalLanguageUnderstandingV1({
+    url: 'https://gateway.watsonplatform.net/natural-language-understanding/api',
+    version: '2019-02-01',
+    iam_apikey: watsonApiKey,
+  });
+
+
 
 
 async function robot(content){
     await fetchContenFromWikipedia(content);
     sanitizeContent(content);
     breakContentIntoSentences(content);
+    limitMaximumSentences(content);
+    await fetchKeyWordsOfAllSentences(content);
 
     async function fetchContenFromWikipedia(content){
         const algorithmiaAuthenticated =  algorithmia(algorithmiaKey);
@@ -45,11 +59,42 @@ async function robot(content){
         sentences.forEach((sentence) => {
             content.sentences.push({
                 text : sentence,
-                keys : [],
+                keywords : [],
                 iamges : [],
             })
         })
    }
+
+   function limitMaximumSentences(content){
+        content.sentences = content.sentences.slice(0,content.maximumSentences);
+   }
+
+   async function fetchKeyWordsOfAllSentences(content){
+        for(const sentence of content.sentences){
+            sentence.keywords = await fetchWatsonAndReturnKeywords(sentence.text);
+        }
+   }
+
+    async function fetchWatsonAndReturnKeywords(sentence){
+        return new Promise((resolve,reject) => {
+            nlu.analyze({
+                text: sentence, // Buffer or String
+                features: {
+                keywords: {}
+                }
+            },
+            function(err, response) {
+                if (err) {
+                    throw err
+                }
+                const keywords = response.keywords.map((keywords) =>{
+                    return keywords.text;
+                })
+                resolve(keywords);
+            });
+        })
+    }
+
 
 }
 
