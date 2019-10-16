@@ -51,7 +51,6 @@ async function robot(){
                     
                     await downloadAndSave(imageUrl,`${sentenceIndex}-original.png`)
 
-                    //await downloadImage()
                     content.downloadedImages.push(imageUrl);
                     console.log(`> [${sentenceIndex}][${imageIndex}]  baixou imagem com sucesso. ${imageUrl}`);
                     break;
